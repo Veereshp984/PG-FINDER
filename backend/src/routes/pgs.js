@@ -56,32 +56,45 @@ router.post(
   protect,
   requireRole("owner", "admin"),
   upload.array("photos", 10),
-  [
-    body("title").notEmpty(),
-    body("description").notEmpty(),
-    body("genderAllowed").notEmpty(),
-    body("location.address").notEmpty(),
-    body("location.city").notEmpty()
-  ],
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    try {
+      const photoUrls = req.files?.length ? await uploadToCloudinary(req.files) : [];
+      
+      // Parse location from JSON string
+      let location = req.body.location;
+      if (typeof location === "string") {
+        location = JSON.parse(location);
+      }
+
+      // Parse sharingTypes from JSON string
+      let sharingTypes = req.body.sharingTypes;
+      if (typeof sharingTypes === "string") {
+        sharingTypes = JSON.parse(sharingTypes);
+      }
+
+      // Parse amenities from JSON string
+      let amenities = req.body.amenities;
+      if (typeof amenities === "string") {
+        amenities = JSON.parse(amenities);
+      }
+
+      const payload = {
+        title: req.body.title,
+        description: req.body.description,
+        genderAllowed: req.body.genderAllowed,
+        location,
+        sharingTypes,
+        amenities,
+        photos: photoUrls,
+        ownerId: req.user._id
+      };
+
+      const pg = await PG.create(payload);
+      res.status(201).json(pg);
+    } catch (error) {
+      console.error("Error creating PG:", error);
+      res.status(400).json({ message: error.message || "Failed to create PG listing" });
     }
-    const photoUrls = req.files?.length ? await uploadToCloudinary(req.files) : [];
-    const payload = {
-      ...req.body,
-      photos: [...photoUrls, ...(req.body.photos || [])],
-      ownerId: req.user._id
-    };
-    if (typeof payload.sharingTypes === "string") {
-      payload.sharingTypes = JSON.parse(payload.sharingTypes);
-    }
-    if (typeof payload.amenities === "string") {
-      payload.amenities = JSON.parse(payload.amenities);
-    }
-    const pg = await PG.create(payload);
-    res.status(201).json(pg);
   }
 );
 
@@ -91,24 +104,51 @@ router.put(
   requireRole("owner", "admin"),
   upload.array("photos", 10),
   async (req, res) => {
-    const pg = await PG.findById(req.params.id);
-    if (!pg) {
-      return res.status(404).json({ message: "PG not found" });
+    try {
+      const pg = await PG.findById(req.params.id);
+      if (!pg) {
+        return res.status(404).json({ message: "PG not found" });
+      }
+      if (req.user.role !== "admin" && pg.ownerId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const newPhotos = req.files?.length ? await uploadToCloudinary(req.files) : [];
+      
+      // Parse location from JSON string
+      let location = req.body.location;
+      if (typeof location === "string") {
+        location = JSON.parse(location);
+      }
+
+      // Parse sharingTypes from JSON string
+      let sharingTypes = req.body.sharingTypes;
+      if (typeof sharingTypes === "string") {
+        sharingTypes = JSON.parse(sharingTypes);
+      }
+
+      // Parse amenities from JSON string
+      let amenities = req.body.amenities;
+      if (typeof amenities === "string") {
+        amenities = JSON.parse(amenities);
+      }
+
+      const updates = {
+        title: req.body.title,
+        description: req.body.description,
+        genderAllowed: req.body.genderAllowed,
+        location,
+        sharingTypes,
+        amenities,
+        photos: [...(pg.photos || []), ...newPhotos]
+      };
+
+      const updated = await PG.findByIdAndUpdate(req.params.id, updates, { new: true });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating PG:", error);
+      res.status(400).json({ message: error.message || "Failed to update PG listing" });
     }
-    if (req.user.role !== "admin" && pg.ownerId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    const newPhotos = req.files?.length ? await uploadToCloudinary(req.files) : [];
-    const updates = { ...req.body };
-    if (typeof updates.sharingTypes === "string") {
-      updates.sharingTypes = JSON.parse(updates.sharingTypes);
-    }
-    if (typeof updates.amenities === "string") {
-      updates.amenities = JSON.parse(updates.amenities);
-    }
-    updates.photos = [...(pg.photos || []), ...newPhotos];
-    const updated = await PG.findByIdAndUpdate(req.params.id, updates, { new: true });
-    res.json(updated);
   }
 );
 
