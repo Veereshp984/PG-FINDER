@@ -5,17 +5,30 @@ export const fetchMyListings = async () => {
   return data;
 };
 
-export const createPG = async (payload) => {
-  const { data } = await api.post("/api/pgs", payload);
+export const createPG = async (formData) => {
+  const { data } = await api.post("/api/pgs", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
   return data;
 };
 
-export const updatePG = async (id, payload) => {
-  const { data } = await api.put(`/api/pgs/${id}`, payload);
+export const updatePG = async (id, formData) => {
+  const { data } = await api.put(`/api/pgs/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
   return data;
 };
 
 export const fetchInquiries = async () => {
   const { data } = await api.get("/api/inquiries");
+  return data;
+};
+
+export const deletePG = async (id) => {
+  const { data } = await api.delete(`/api/pgs/${id}`);
   return data;
 };
