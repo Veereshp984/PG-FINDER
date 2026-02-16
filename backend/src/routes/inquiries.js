@@ -9,7 +9,6 @@ const router = express.Router();
 
 router.post(
   "/pgs/:id/inquiry",
-  protect,
   [body("name").notEmpty(), body("phone").notEmpty()],
   async (req, res) => {
     const errors = validationResult(req);
@@ -22,7 +21,7 @@ router.post(
     }
     const inquiry = await Inquiry.create({
       pgId: pg._id,
-      userId: req.user?._id,
+      userId: req.user?._id || null,
       name: req.body.name,
       phone: req.body.phone,
       message: req.body.message
