@@ -15,6 +15,11 @@ export const fetchReviews = async (id) => {
   return data;
 };
 
+export const submitReview = async (id, payload) => {
+  const { data } = await api.post(`/api/pgs/${id}/reviews`, payload);
+  return data;
+};
+
 export const toggleWishlist = async (id) => {
   const { data } = await api.post(`/api/wishlist/${id}`);
   return data;

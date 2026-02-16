@@ -7,14 +7,29 @@ import OwnerPGForm from "../../components/OwnerPGForm.jsx";
 const OwnerEditPG = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: pg } = useQuery({ queryKey: ["pg", id], queryFn: () => fetchPG(id) });
+  const { data: pg, isLoading } = useQuery({ queryKey: ["pg", id], queryFn: () => fetchPG(id) });
   const mutation = useMutation({
     mutationFn: (payload) => updatePG(id, payload),
     onSuccess: () => navigate("/owner/dashboard")
   });
 
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded w-1/3"></div>
+          <div className="h-64 bg-slate-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   if (!pg) {
-    return <div className="max-w-4xl mx-auto px-4 py-10">Loading...</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <p className="text-slate-500">PG not found.</p>
+      </div>
+    );
   }
 
   const defaultValues = {
@@ -23,15 +38,21 @@ const OwnerEditPG = () => {
     genderAllowed: pg.genderAllowed,
     address: pg.location?.address,
     city: pg.location?.city,
-    sharing: pg.sharingTypes?.[0]?.type?.toString() || "1",
-    price: pg.sharingTypes?.[0]?.price?.toString() || "",
-    amenities: pg.amenities?.join(", ") || ""
+    lat: pg.location?.coordinates?.lat?.toString() || "",
+    lng: pg.location?.coordinates?.lng?.toString() || "",
+    sharingTypes: pg.sharingTypes || [{ type: 1, price: 5000, available: true }],
+    amenities: pg.amenities || [],
+    photos: pg.photos || []
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 space-y-4">
+    <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
       <h1 className="text-2xl font-semibold">Edit PG Listing</h1>
-      <OwnerPGForm defaultValues={defaultValues} onSubmit={(values) => mutation.mutate(values)} submitting={mutation.isPending} />
+      <OwnerPGForm
+        defaultValues={defaultValues}
+        onSubmit={(values) => mutation.mutate(values)}
+        submitting={mutation.isPending}
+      />
     </div>
   );
 };
